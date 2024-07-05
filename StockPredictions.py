@@ -9,3 +9,5 @@ import pandas as pd
 import tensorflow as tf
 from pandas_datareader import data
 from sklearn.preprocessing import MinMaxScaler
+
+api_key = open("api_key.txt", "r").read()
