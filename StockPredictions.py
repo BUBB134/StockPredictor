@@ -123,3 +123,9 @@ for pred_idx in range(window_size, N):
         date = dt.datetime.strptime(k, "%Y-%m-%d").date() + dt.timedelta(days=1)
     else:
         date = df.loc[pred_idx, "Date"]
+
+    std_avg_predictions.append(np.mean(train_data[pred_idx-window_size : pred_idx]))
+    mse_errors.append((std_avg_predictions[-1] - train_data[pred_idx])**2)
+    std_avg_x.append(date)
+    
+print("MSE error for standard averaging: %.5f"%(0.5*np.mean(mse_errors)))
