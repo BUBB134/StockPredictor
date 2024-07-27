@@ -6,7 +6,7 @@ import urllib.request
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+#import tensorflow as tf
 from pandas_datareader import data
 from sklearn.preprocessing import MinMaxScaler
 
@@ -70,15 +70,15 @@ df = df.sort_values("Date")
 # Double check the result
 df.head()
 
-plt.figure(figsize=(18, 9))
+'''plt.figure(figsize=(18, 9))
 plt.plot(range(df.shape[0]), (df["Low"] + df["High"]) / 2.0)
 plt.xticks(range(0, df.shape[0], 500), df["Date"].loc[::500], rotation=45)
 plt.xlabel("Date", fontsize=18)
 plt.ylabel("Mid Price", fontsize=18)
-plt.show()
+plt.show()'''
 
-high_prices = df.loc[:, "High"].as_matrix()
-low_prices = df.loc[:, "Low"].as_matrix()
+high_prices = df.loc[:, "High"].to_numpy()
+low_prices = df.loc[:, "Low"].to_numpy()
 mid_prices = (high_prices + low_prices) / 2.0
 
 train_data = mid_prices[:11000]
@@ -90,23 +90,28 @@ train_data = train_data.reshape(-1, 1)
 test_data = test_data.reshape(-1, 1)
 
 smoothing_window_size = 2500
-for di in range(0, 10000, smoothing_window_size):
-    scaler.fit(train_data[di : di + smoothing_window_size, :])
-    train_data[di : di + smoothing_window_size, :] = scaler.transform(
-        train_data[di : di + smoothing_window_size, :]
+for di in range(0, len(train_data), smoothing_window_size):
+    end_index = min(di + smoothing_window_size, len(train_data))
+    if end_index > di:  # Ensure there is data to fit
+        scaler.fit(train_data[di:end_index, :])
+        train_data[di:end_index, :] = scaler.transform(train_data[di:end_index, :])
+
+# Ensure there is data to fit for the remaining part
+if di + smoothing_window_size < len(train_data):
+    scaler.fit(train_data[di + smoothing_window_size :, :])
+    train_data[di + smoothing_window_size :, :] = scaler.transform(
+        train_data[di + smoothing_window_size :, :]
     )
 
-scaler.fit(train_data[di + smoothing_window_size :, :])
-train_data[di + smoothing_window_size :, :] = scaler.transform(
-    train_data[di + smoothing_window_size :, :]
-)
+train_data = train_data.reshape(-1,1)
 
-train_data = train_data.reshape(-1)
-test_data = scaler.transform(test_data).reshape(-1)
+# Ensure test_data is not empty before transforming
+if test_data.size > 0:
+    test_data = scaler.transform(test_data).reshape(-1,1)
 
 EMA = 0.0
 gamma = 0.1
-for ti in range(11000):
+for ti in range(min(11000, len(train_data))):
     EMA = gamma * train_data[ti] + (1 - gamma) * EMA
     train_data[ti] = EMA
 
@@ -129,3 +134,12 @@ for pred_idx in range(window_size, N):
     std_avg_x.append(date)
     
 print("MSE error for standard averaging: %.5f"%(0.5*np.mean(mse_errors)))
+
+plt.figure(figsize = (18,9))
+plt.plot(range(df.shape[0]),all_mid_data,color='b',label='True')
+plt.plot(range(window_size,N),std_avg_predictions,color='orange',label='Prediction')
+#plt.xticks(range(0,df.shape[0],50),df['Date'].loc[::50],rotation=45)
+plt.xlabel('Date')
+plt.ylabel('Mid Price')
+plt.legend(fontsize=18)
+plt.show()
